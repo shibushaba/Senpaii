@@ -21,7 +21,6 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - name: Install globally from GitHub and smoke-test project lifecycle
-        shell: bash
         run: |
           npm install --global git+https://github.com/shibushaba/Senpaii.git#feat/cdk-global-cli-v0.1.0
           cdk-kit --version
