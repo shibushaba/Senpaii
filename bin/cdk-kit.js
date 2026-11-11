@@ -190,8 +190,7 @@ async function detectProject(root) {
     profiles.add("databases-supabase");
   }
 
-  const aiPatterns = [/\\bopenai\\b/, /\\banthropic\\b/, /google-generativeai/, /google-genai/,
-    /\\bgroq\\b/, /\\blangchain\\b/, /llama[-_]index/, /\\bchromadb\\b/, /\\bpinecone\\b/];
+  const aiPatterns = [/openai/, /anthropic/, /google-generativeai/, /google-genai/, /groq/, /langchain/, /llama[-_]index/, /chromadb/, /pinecone/];
   for (const file of ["requirements.txt", "requirements-dev.txt", "pyproject.toml"]) {
     if (await includesAny(file, aiPatterns)) profiles.add("ai-llm-rag");
   }
@@ -264,7 +263,7 @@ async function listProfiles(target = ".") {
   let installed;
   try { installed = new Set(await readdir(directory)); }
   catch {
-    stdout.write("CDK technology profiles are not installed in this project. Run cdk-kit init first.\\n");
+    stdout.write("CDK technology profiles are not installed in this project. Run cdk-kit init first.\n");
     return;
   }
   const catalog = [
@@ -275,15 +274,15 @@ async function listProfiles(target = ".") {
     { id: "ai-llm-rag", file: "ai-llm-rag.md", label: "AI / LLM / RAG" },
     { id: "n8n-automation", file: "n8n-automation.md", label: "n8n / Workflow automation" }
   ];
-  stdout.write("CDK technology profiles — " + path.basename(root) + "\\n");
-  stdout.write("Project evidence: " + (project.markers.join(", ") || "no recognized markers") + "\\n\\n");
+  stdout.write("CDK technology profiles — " + path.basename(root) + "\n");
+  stdout.write("Project evidence: " + (project.markers.join(", ") || "no recognized markers") + "\n\n");
   for (const profile of catalog) {
     const present = installed.has(profile.file);
     const matched = project.profiles.includes(profile.id);
     const state = !present ? "MISSING" : matched ? "MATCHED" : "AVAILABLE (not matched)";
-    stdout.write("[" + state + "] " + profile.label + " — .cdk/profiles/" + profile.file + "\\n");
+    stdout.write("[" + state + "] " + profile.label + " — .cdk/profiles/" + profile.file + "\n");
   }
-  stdout.write("\\nProfiles are advisory. Read only matched profiles and verify the relevant framework/database from source before applying guidance.\\n");
+  stdout.write("\nProfiles are advisory. Read only matched profiles and verify the relevant framework/database from source before applying guidance.\n");
 }
 async function uninstall(target = ".", options = {}) {
   const root = path.resolve(target), manifest = await readManifest(root);
