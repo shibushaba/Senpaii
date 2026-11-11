@@ -18,6 +18,15 @@ function sha256(content: Buffer | string): string {
   return createHash("sha256").update(content).digest("hex");
 }
 
+function destinationForAsset(assetPath: string): string {
+  // npm excludes files named .gitignore; ship this template under a package-safe name.
+  return assetPath === ".cdk/cdk-gitignore" ? ".cdk/.gitignore" : assetPath;
+}
+
+function assetForDestination(destinationPath: string): string {
+  return destinationPath === ".cdk/.gitignore" ? ".cdk/cdk-gitignore" : destinationPath;
+}
+
 async function walkFiles(directory: string, base = directory): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const files: string[] = [];
@@ -74,14 +83,15 @@ export async function buildInstallPlan(projectRoot: string, assetsDir = bundledA
   const assets = await walkFiles(assetsDir);
   const plan: InstallPlanEntry[] = [];
 
-  for (const relativePath of assets) {
+  for (const assetPath of assets) {
+    const relativePath = destinationForAsset(assetPath);
     const destination = resolveInsideProject(root, relativePath);
     const destinationState = await inspectDestination(root, relativePath);
     if (destinationState === "blocked") {
       plan.push({ relativePath, action: "skip-conflict", reason: "A path component is a symlink, directory, or non-directory; refusing to follow it." });
       continue;
     }
-    const sourceContent = await readFile(path.join(assetsDir, relativePath.split("/").join(path.sep)));
+    const sourceContent = await readFile(path.join(assetsDir, assetPath.split("/").join(path.sep)));
     const desiredHash = sha256(renderAsset(relativePath, sourceContent.toString("utf8"), root));
     const currentRecord = managed[relativePath];
 
@@ -123,7 +133,7 @@ export async function applyInstallPlan(
     if (item.action === "skip-conflict" || item.action === "skip-modified") { skipped++; continue; }
     if (item.action === "unchanged") { unchanged++; continue; }
 
-    const source = path.join(assetsDir, item.relativePath.split("/").join(path.sep));
+    const source = path.join(assetsDir, assetForDestination(item.relativePath).split("/").join(path.sep));
     const destination = resolveInsideProject(root, item.relativePath);
     const raw = await readFile(source, "utf8");
     const content = renderAsset(item.relativePath, raw, root);

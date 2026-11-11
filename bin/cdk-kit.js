@@ -12,9 +12,7 @@ const VERSION = "0.1.0";
 const MANIFEST_RELATIVE = path.join(".cdk", "cli-manifest.json");
 const ASSETS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/project");
 
-function sha256(value) {
-  return createHash("sha256").update(value).digest("hex");
-}
+function sha256(value) { return createHash("sha256").update(value).digest("hex"); }
 function identity(root) {
   const name = path.basename(path.resolve(root)) || "project";
   const id = name.normalize("NFKD").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "project";
@@ -23,14 +21,9 @@ function identity(root) {
 async function readManifest(root) {
   try {
     const parsed = JSON.parse(await readFile(path.join(root, MANIFEST_RELATIVE), "utf8"));
-    if (parsed.schemaVersion !== 1 || parsed.engine !== ENGINE || !parsed.files || typeof parsed.files !== "object") {
-      throw new Error("Unsupported or invalid CDK manifest.");
-    }
+    if (parsed.schemaVersion !== 1 || parsed.engine !== ENGINE || !parsed.files || typeof parsed.files !== "object") throw new Error("Unsupported or invalid CDK manifest.");
     return parsed;
-  } catch (error) {
-    if (error?.code === "ENOENT") return null;
-    throw error;
-  }
+  } catch (error) { if (error?.code === "ENOENT") return null; throw error; }
 }
 async function writeManifest(root, manifest) {
   const destination = path.join(root, MANIFEST_RELATIVE);
@@ -49,6 +42,12 @@ async function walk(directory, base = directory) {
     else if (entry.isFile()) result.push(path.relative(base, full).split(path.sep).join("/"));
   }
   return result;
+}
+function destinationForAsset(assetPath) {
+  return assetPath === ".cdk/cdk-gitignore" ? ".cdk/.gitignore" : assetPath;
+}
+function assetForDestination(destinationPath) {
+  return destinationPath === ".cdk/.gitignore" ? ".cdk/cdk-gitignore" : destinationPath;
 }
 async function inspectTarget(root, relativePath) {
   let current = root;
@@ -72,28 +71,26 @@ function targetPath(root, relativePath) {
 function renderAsset(relativePath, content, root) {
   if (relativePath === ".cdk/config.yaml") {
     const project = identity(root);
-    return content.replaceAll("replace-with-stable-project-slug", project.id)
-      .replaceAll("Replace with project name", project.name);
+    return content.replaceAll("replace-with-stable-project-slug", project.id).replaceAll("Replace with project name", project.name);
   }
   return content;
 }
 async function buildPlan(root) {
   const absolute = path.resolve(root);
   const rootInfo = await lstat(absolute);
-  if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) {
-    throw new Error("Target must be an existing, real project directory (not a symlink).");
-  }
+  if (rootInfo.isSymbolicLink() || !rootInfo.isDirectory()) throw new Error("Target must be an existing, real project directory (not a symlink).");
   const manifest = await readManifest(absolute);
   const managed = manifest?.files ?? {};
   const plan = [];
-  for (const relativePath of await walk(ASSETS)) {
+  for (const assetPath of await walk(ASSETS)) {
+    const relativePath = destinationForAsset(assetPath);
     const destination = targetPath(absolute, relativePath);
     const state = await inspectTarget(absolute, relativePath);
     if (state === "blocked") {
       plan.push({ relativePath, action: "skip-conflict", reason: "A path component is a symlink, directory, or non-directory; refusing to follow it." });
       continue;
     }
-    const desired = renderAsset(relativePath, await readFile(path.join(ASSETS, relativePath.split("/").join(path.sep)), "utf8"), absolute);
+    const desired = renderAsset(relativePath, await readFile(path.join(ASSETS, assetPath.split("/").join(path.sep)), "utf8"), absolute);
     const record = managed[relativePath];
     if (state === "missing") { plan.push({ relativePath, action: "create" }); continue; }
     const currentHash = sha256(await readFile(destination));
@@ -116,7 +113,7 @@ async function applyPlan(root, preview) {
     if (item.action === "skip-conflict" || item.action === "skip-modified") { counts.skipped++; continue; }
     if (item.action === "unchanged") { counts.unchanged++; continue; }
     const content = renderAsset(item.relativePath,
-      await readFile(path.join(ASSETS, item.relativePath.split("/").join(path.sep)), "utf8"), absolute);
+      await readFile(path.join(ASSETS, assetForDestination(item.relativePath).split("/").join(path.sep)), "utf8"), absolute);
     const destination = targetPath(absolute, item.relativePath);
     await mkdir(path.dirname(destination), { recursive: true });
     await writeFile(destination, content, "utf8");
@@ -131,8 +128,7 @@ async function applyPlan(root, preview) {
   return counts;
 }
 async function uninstallFiles(root) {
-  const absolute = path.resolve(root);
-  const manifest = await readManifest(absolute);
+  const absolute = path.resolve(root), manifest = await readManifest(absolute);
   if (!manifest) return { removed: 0, preserved: 0 };
   let removed = 0, preserved = 0;
   for (const [relativePath, record] of Object.entries(manifest.files)) {
@@ -188,25 +184,20 @@ function printPlan(plan) {
   for (const item of plan) stdout.write("  " + labels[item.action].padEnd(25) + " " + item.relativePath + (item.reason ? " — " + item.reason : "") + "\n");
 }
 async function init(target = ".", options = {}) {
-  const root = path.resolve(target);
-  const project = await detectProject(root);
-  const plan = await buildPlan(root);
-  stdout.write("\nCDK project setup: " + path.basename(root) + "\nProject: " + root +
-    "\nDetected profiles: " + (project.profiles.join(", ") || "general") + "\n\n");
+  const root = path.resolve(target), project = await detectProject(root), plan = await buildPlan(root);
+  stdout.write("\nCDK project setup: " + path.basename(root) + "\nProject: " + root + "\nDetected profiles: " + (project.profiles.join(", ") || "general") + "\n\n");
   printPlan(plan);
   if (!plan.some(item => item.action === "create" || item.action === "update")) { stdout.write("\nNo file changes are required.\n"); return; }
   if (options.dryRun) { stdout.write("\nDry run only. No files were changed.\n"); return; }
-  if (options.yes !== true && !(await ask("Apply this plan? [y/N] "))) {
+  if (options.yes !== true && !(await ask("Apply this plan? [y/N] ")) ) {
     stdout.write("\nNothing changed. Re-run with --yes to apply the displayed plan.\n"); return;
   }
   const result = await applyPlan(root, plan);
-  stdout.write("\nCDK initialized. Created: " + result.created + ", updated: " + result.updated +
-    ", skipped: " + result.skipped + ", unchanged: " + result.unchanged + ".\n");
+  stdout.write("\nCDK initialized. Created: " + result.created + ", updated: " + result.updated + ", skipped: " + result.skipped + ", unchanged: " + result.unchanged + ".\n");
   stdout.write("Project memory remains local to this repository. No application source files were changed.\n");
 }
 async function doctor(target = ".") {
-  const root = path.resolve(target), project = await detectProject(root);
-  const checks = [];
+  const root = path.resolve(target), project = await detectProject(root), checks = [];
   const major = Number(process.versions.node.split(".")[0]);
   checks.push(["Node.js", major >= 20, "v" + process.versions.node + " (requires >=20)"]);
   checks.push(["Project directory", true, root]);
@@ -221,12 +212,9 @@ async function doctor(target = ".") {
 }
 async function status(target = ".") {
   const root = path.resolve(target), project = await detectProject(root), manifest = await readManifest(root);
-  stdout.write("CDK CLI: " + VERSION + "\nProject: " + path.basename(root) + "\nPath: " + root +
-    "\nProfiles: " + (project.profiles.join(", ") || "general") + "\n");
+  stdout.write("CDK CLI: " + VERSION + "\nProject: " + path.basename(root) + "\nPath: " + root + "\nProfiles: " + (project.profiles.join(", ") || "general") + "\n");
   if (!manifest) { stdout.write("Status: not initialized (run cdk-kit init)\n"); return; }
-  stdout.write("Status: initialized\nInstalled engine: " + manifest.engineVersion + "\nManaged files: " +
-    Object.keys(manifest.files).length + "\nLast updated: " + manifest.updatedAt +
-    "\nProject memory: isolated in this repository\n");
+  stdout.write("Status: initialized\nInstalled engine: " + manifest.engineVersion + "\nManaged files: " + Object.keys(manifest.files).length + "\nLast updated: " + manifest.updatedAt + "\nProject memory: isolated in this repository\n");
 }
 async function uninstall(target = ".", options = {}) {
   const root = path.resolve(target), manifest = await readManifest(root);
@@ -236,8 +224,7 @@ async function uninstall(target = ".", options = {}) {
     stdout.write("Nothing changed. Re-run with --yes to confirm uninstall.\n"); return;
   }
   const result = await uninstallFiles(root);
-  stdout.write("Uninstall complete. Removed: " + result.removed + "; preserved local modifications: " +
-    result.preserved + ". User-owned files were not touched.\n");
+  stdout.write("Uninstall complete. Removed: " + result.removed + "; preserved local modifications: " + result.preserved + ". User-owned files were not touched.\n");
 }
 
 const program = new Command();
@@ -245,10 +232,8 @@ program.name("cdk-kit").description("Install and manage the Cursor Development K
 program.command("init").description("Preview and initialize CDK in the target project")
   .argument("[path]", "project directory", ".").option("-y, --yes", "apply the displayed plan without prompting")
   .option("--dry-run", "show planned changes without writing files").action(init);
-program.command("doctor").description("Check the current project's CDK installation")
-  .argument("[path]", "project directory", ".").action(doctor);
-program.command("status").description("Show CDK and project profile status")
-  .argument("[path]", "project directory", ".").action(status);
+program.command("doctor").description("Check the current project's CDK installation").argument("[path]", "project directory", ".").action(doctor);
+program.command("status").description("Show CDK and project profile status").argument("[path]", "project directory", ".").action(status);
 program.command("update").description("Safely reconcile CDK-managed files to this CLI version")
   .argument("[path]", "project directory", ".").option("-y, --yes", "apply the displayed plan without prompting")
   .option("--dry-run", "show planned changes without writing files").action(init);
@@ -259,8 +244,7 @@ program.command("learn").description("Show the IDE commands for project learning
   stdout.write("Global promotion always requires explicit human approval.\n");
 });
 program.command("uninstall").description("Remove unchanged CDK-managed files from a project")
-  .argument("[path]", "project directory", ".").option("-y, --yes", "confirm removal")
-  .option("--dry-run", "show what would be inspected without changes").action(uninstall);
+  .argument("[path]", "project directory", ".").option("-y, --yes", "confirm removal").option("--dry-run", "show what would be inspected without changes").action(uninstall);
 program.showHelpAfterError();
 program.parseAsync(process.argv).catch(error => {
   console.error("cdk-kit: " + (error instanceof Error ? error.message : String(error)));

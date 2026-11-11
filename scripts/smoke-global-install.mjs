@@ -1,5 +1,5 @@
 import { execSync, spawnSync } from "node:child_process";
-import { access, mkdir, rm, stat } from "node:fs/promises";
+import { access, mkdir, readFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
@@ -25,6 +25,10 @@ try {
   for (const directory of ["experiences", "journal", "lessons/proposed", "lessons/verified", "lessons/rejected", "decisions", "workflows", "uat", "incidents", "promotion-queue"]) {
     const info = await stat(path.join(project, ".cdk", directory));
     if (!info.isDirectory()) throw new Error("Missing CDK memory directory: " + directory);
+  }
+  const ignore = await readFile(path.join(project, ".cdk", ".gitignore"), "utf8");
+  if (!ignore.includes("/experiences/*") || !ignore.includes("!/experiences/.gitkeep")) {
+    throw new Error("CDK project memory ignore policy was not installed correctly.");
   }
   run(["status", project]);
   run(["uninstall", project, "--yes"]);

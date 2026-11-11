@@ -8,22 +8,27 @@ import { buildInstallPlan, applyInstallPlan } from "../dist/lib/installer.js";
 
 const assets = fileURLToPath(new URL("../assets/project/", import.meta.url));
 
-test("first install plans and writes bundled assets with a manifest", async () => {
+test("first install writes complete project memory structure, ignore policy, and manifest", async () => {
   const root = await mkdtemp(path.join(os.tmpdir(), "cdk-kit-test-"));
   try {
     const plan = await buildInstallPlan(root, assets);
     assert.ok(plan.length > 0);
     assert.ok(plan.every(item => item.action === "create"));
+    assert.ok(plan.some(item => item.relativePath === ".cdk/.gitignore"));
     const result = await applyInstallPlan(root, plan, assets);
     assert.equal(result.created, plan.length);
     const config = await readFile(path.join(root, ".cdk", "config.yaml"), "utf8");
     assert.ok(config.includes(`project_name: "${path.basename(root)}"`));
+    const ignore = await readFile(path.join(root, ".cdk", ".gitignore"), "utf8");
+    assert.ok(ignore.includes("/experiences/*"));
+    assert.ok(ignore.includes("!/experiences/.gitkeep"));
     for (const directory of ["experiences", "journal", "lessons/proposed", "lessons/verified", "lessons/rejected", "decisions", "workflows", "uat", "incidents", "promotion-queue"]) {
       const info = await stat(path.join(root, ".cdk", directory));
       assert.ok(info.isDirectory(), `expected .cdk/${directory} to exist`);
     }
     const manifest = JSON.parse(await readFile(path.join(root, ".cdk", "cli-manifest.json"), "utf8"));
     assert.equal(Object.keys(manifest.files).length, plan.length);
+    assert.ok(Object.hasOwn(manifest.files, ".cdk/.gitignore"));
   } finally {
     await rm(root, { recursive: true, force: true });
   }

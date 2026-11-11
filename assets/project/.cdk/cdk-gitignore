@@ -1,0 +1,14 @@
+# Keep operational records local while allowing directory placeholders to ship.
+# These patterns ignore record contents but re-include the folder placeholder.
+/journal/*
+!/journal/.gitkeep
+/experiences/*
+!/experiences/.gitkeep
+/uat/*
+!/uat/.gitkeep
+/incidents/*
+!/incidents/.gitkeep
+
+# Local scratch and temporary validation data.
+*.tmp
+*.local
