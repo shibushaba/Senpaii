@@ -1,10 +1,10 @@
-import { execFileSync, spawnSync } from "node:child_process";
+import { execSync, spawnSync } from "node:child_process";
 import { access, mkdir, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 
 const windows = process.platform === "win32";
-const prefix = execFileSync("npm", ["prefix", "--global"], { encoding: "utf8" }).trim();
+const prefix = execSync("npm prefix --global", { encoding: "utf8", shell: windows }).trim();
 const binDirectory = windows ? prefix : path.join(prefix, "bin");
 const executable = path.join(binDirectory, windows ? "cdk-kit.cmd" : "cdk-kit");
 
