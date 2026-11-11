@@ -1,0 +1,9 @@
+node_modules/
+src/
+test/
+.github/
+docs/
+coverage/
+*.log
+.DS_Store
+Thumbs.db

@@ -1,0 +1,17 @@
+---
+description: Production readiness, deployment and operational safety guidance.
+alwaysApply: false
+---
+# Release and Operations
+
+Before release, consider:
+- Environment/configuration parity and secret availability.
+- Build and test results.
+- Database migration order, compatibility and rollback/forward-fix.
+- Health checks, logs, metrics and alerting.
+- Background jobs, queues, scheduled tasks and webhook behavior.
+- Backups and restore readiness for data-impacting releases.
+- Feature flags, staged rollout and rollback plan.
+- User-facing changes, support notes and documentation.
+
+Never deploy, push, publish or alter production resources without explicit user authorization.

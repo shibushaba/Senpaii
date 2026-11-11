@@ -1,0 +1,34 @@
+---
+description: Consult project memory before acting and capture lessons after fixes, failures, reviews, and releases.
+alwaysApply: true
+---
+# Proactive learning
+
+Use this project's `.cdk/` memory as engineering experience, not as a second source of truth.
+
+## Before acting
+
+1. Read `.cdk/activation.yaml` when it exists. Open only profiles and quality gates marked `matched` or `active`, then confirm the stack from the repository.
+2. Search `.cdk/lessons/`, `.cdk/decisions/`, `.cdk/workflows/`, `.cdk/incidents/`, and `.cdk/uat/` for terms in the current task.
+3. If `.cdk/config.yaml` has `global_knowledge.enabled: true`, also consider `.cdk/global-mirror/INDEX.md`. Otherwise do not search other projects or the user-level library.
+4. When a **verified** lesson matches the task, say so before editing: lesson id, why it applies, and what you will do differently. This is required even when the user did not ask for prior art.
+5. Label **proposed** lessons as proposed. Use them as hints, not as controls.
+6. If two lessons conflict, show both and follow the repository.
+
+## After a meaningful event
+
+Capture a record when a fix, a failed attempt, a review, or a release taught something the next session could reuse. Skip typos, formatting, and changes with no new information.
+
+| Moment | Record |
+|---|---|
+| Bug fixed or attempt failed | Experience, plus a proposed lesson only when the cause is supported |
+| Procedure worked and is worth repeating | Workflow |
+| A choice was made among real alternatives | Decision |
+| Acceptance feedback arrived | UAT finding |
+| Release or incident | Incident or lesson, with sensitive data removed |
+
+Write the file from the matching template under `.cdk/templates/`. Set lesson `status: proposed`. Do not set `verified`, do not edit rules or skills, and do not run promotion. If the evidence is too thin, ask one question instead of inventing a cause.
+
+## Retrieval quality
+
+Prefer a small number of relevant records over a dump. Cite paths and ids. State limitations. If nothing relevant exists, say so and continue.

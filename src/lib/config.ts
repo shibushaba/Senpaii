@@ -1,0 +1,28 @@
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+
+export interface ProjectConfig {
+  globalEnabled: boolean;
+  globalPath: string | null;
+}
+
+export async function readProjectConfig(projectRoot: string): Promise<ProjectConfig> {
+  const filePath = path.join(projectRoot, ".cdk", "config.yaml");
+  let text = "";
+  try {
+    text = await readFile(filePath, "utf8");
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code === "ENOENT") return { globalEnabled: false, globalPath: null };
+    throw error;
+  }
+  const match = text.match(/^global_knowledge:\n((?:  .*\n?)*)/m);
+  const block = match?.[1] ?? "";
+  const enabled = /^  enabled:\s*true\s*$/m.test(block);
+  const pathMatch = block.match(/^  path:\s*(.+)\s*$/m);
+  let globalPath: string | null = null;
+  if (pathMatch?.[1]) {
+    const raw = pathMatch[1].trim().replace(/^["']|["']$/g, "");
+    if (raw && raw !== "null" && raw !== "~") globalPath = raw;
+  }
+  return { globalEnabled: enabled, globalPath };
+}

@@ -3,6 +3,7 @@ import path from "node:path";
 import { stdout } from "node:process";
 import { ENGINE_VERSION, readManifest } from "../lib/manifest.js";
 import { detectProject } from "../lib/project.js";
+import { readProjectConfig } from "../lib/config.js";
 
 export async function runDoctor(target = "."): Promise<void> {
   const root = path.resolve(target);
@@ -20,6 +21,14 @@ export async function runDoctor(target = "."): Promise<void> {
   const manifest = await readManifest(root);
   checks.push({ label: "CDK manifest", ok: Boolean(manifest), detail: manifest ? `engine ${manifest.engineVersion}, ${Object.keys(manifest.files).length} managed files` : "Not installed" });
   checks.push({ label: "Project profile detection", ok: true, detail: project.profiles.join(", ") || "no profile matched; general guidance applies" });
+  const activeGates = project.gates.filter(gate => gate.status === "active").map(gate => gate.id);
+  checks.push({ label: "Stack activation", ok: true, detail: `active gates: ${activeGates.join(", ")}` });
+  const config = await readProjectConfig(root);
+  checks.push({
+    label: "Global knowledge",
+    ok: true,
+    detail: config.globalEnabled ? "enabled for this project" : "disabled until this project opts in"
+  });
   try {
     const files = (await readdir(path.join(root, ".cdk", "profiles"))).filter(file => file.endsWith(".md"));
     checks.push({ label: "Technology profiles", ok: files.length >= 6, detail: `${files.length} of 6 installed` });

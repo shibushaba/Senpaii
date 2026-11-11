@@ -1,0 +1,13 @@
+---
+description: API contracts and third-party integration implementation guidance.
+alwaysApply: false
+---
+# APIs and Integrations
+
+- Inspect existing API conventions before adding endpoints.
+- Define request/response contracts, validation, errors, auth and versioning expectations.
+- Use timeouts, bounded retries with backoff, idempotency where needed, and clear failure handling.
+- Do not retry non-idempotent operations blindly.
+- Keep credentials server-side and use environment/configuration patterns already present.
+- Validate webhook signatures when supported; protect against replay and duplicate delivery.
+- Document external dependencies, quotas, rate limits and degraded-mode behavior.

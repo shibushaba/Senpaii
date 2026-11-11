@@ -1,0 +1,14 @@
+---
+description: Inspect existing repository structure and patterns before editing code.
+alwaysApply: false
+---
+# Repository-First Development
+
+Before editing:
+1. Identify the relevant entry points and files.
+2. Inspect nearby implementations and tests for established patterns.
+3. Read relevant configuration, dependency versions and scripts.
+4. Trace the affected flow across UI, API, services, persistence and integrations as applicable.
+5. Check current Git status and preserve unrelated changes.
+
+Do not assume a greenfield architecture in an existing repository. Reuse working abstractions when appropriate. If the requested change conflicts with current architecture, explain the conflict and propose the least disruptive option.

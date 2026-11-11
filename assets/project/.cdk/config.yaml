@@ -5,6 +5,12 @@ project_name: "Replace with project name"
 capture:
   mode: assisted
   require_evidence: true
+  consult_before_acting: true
+  propose_after:
+    - fix
+    - failed_attempt
+    - review
+    - release
 
 learning:
   auto_verify: false

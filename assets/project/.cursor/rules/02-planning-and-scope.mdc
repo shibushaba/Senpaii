@@ -1,0 +1,18 @@
+---
+description: Use for feature planning, architecture decisions and multi-file changes.
+alwaysApply: false
+---
+# Planning and Scope Control
+
+For substantial changes, produce a plan before editing:
+- User problem and desired outcome.
+- Confirmed current behavior.
+- Acceptance criteria and edge cases.
+- Proposed approach and alternatives where consequential.
+- Files/modules likely to change and why.
+- Data/API/interface impact.
+- Risks, migration needs and rollback considerations.
+- Test plan and verification commands.
+- Explicit out-of-scope items.
+
+Do not begin implementation until the user approves the plan when the task is substantial, ambiguous, high-risk or explicitly asks for planning first. Keep tiny, obvious fixes lightweight.

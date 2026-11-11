@@ -1,0 +1,15 @@
+---
+description: Security, privacy, authorization and data integrity guardrails.
+alwaysApply: false
+---
+# Security and Data Protection
+
+- Never hardcode secrets or expose them in logs, diffs, documentation or examples.
+- Enforce authorization server-side on every protected operation; UI hiding is not authorization.
+- Check object-level access and tenant isolation, including ID substitution and cross-user access.
+- Validate and normalize untrusted input at boundaries; use parameterized queries and safe output encoding.
+- Avoid logging credentials, tokens, payment data or unnecessary personal information.
+- Apply least privilege, secure defaults and appropriate rate limits.
+- Treat file uploads, webhooks, redirects, CORS/CSRF and external callbacks as trust boundaries.
+- For schema changes, inspect migration conventions, data volume, locks, backfills and rollback/forward-fix strategy.
+- Do not run destructive data operations without explicit approval and a verified backup/restore plan.

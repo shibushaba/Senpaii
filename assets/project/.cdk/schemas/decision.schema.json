@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CDK Decision",
+  "type": "object",
+  "required": ["id", "record_type", "title", "status", "created_at", "project_id", "summary"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^DEC-[0-9]{8}-[0-9]{3}$" },
+    "record_type": { "const": "decision" },
+    "title": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["proposed", "accepted", "superseded"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 }
+  },
+  "additionalProperties": true
+}

@@ -23,5 +23,10 @@ export async function runProfiles(target = "."): Promise<void> {
     const status = !present ? "MISSING" : matched ? "MATCHED" : "AVAILABLE (not matched)";
     stdout.write(`[${status}] ${profile.label} — .cdk/profiles/${profile.file}\n`);
   }
-  stdout.write("\nProfiles are advisory. Read only matched profiles, and verify the relevant framework/database from source before applying guidance.\n");
+  stdout.write("\nProfiles are advisory. Read only matched profiles, and verify the relevant framework or database from source before applying guidance.\n\n");
+  stdout.write("Quality gates for this stack:\n");
+  for (const gate of project.gates) {
+    const label = gate.status === "active" ? "ACTIVE" : "AVAILABLE";
+    stdout.write(`[${label}] ${gate.label} — .cdk/quality-gates/${gate.file} (${gate.reason})\n`);
+  }
 }
