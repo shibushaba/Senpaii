@@ -1,0 +1,29 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CDK Lesson",
+  "type": "object",
+  "required": ["id", "record_type", "title", "status", "scope", "created_at", "project_id", "summary", "confidence", "promotion"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^LES-[0-9]{8}-[0-9]{3}$" },
+    "record_type": { "const": "lesson" },
+    "title": { "type": "string", "minLength": 1 },
+    "status": { "enum": ["proposed", "verified", "rejected"] },
+    "scope": { "enum": ["project", "global_candidate", "global"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "summary": { "type": "string", "minLength": 1 },
+    "confidence": { "enum": ["low", "medium", "high"] },
+    "promotion": {
+      "type": "object",
+      "required": ["status"],
+      "properties": {
+        "status": { "enum": ["not_requested", "pending", "approved", "rejected", "promoted"] },
+        "proposal_id": { "type": ["string", "null"] },
+        "approved_by": { "type": ["string", "null"] },
+        "approved_at": { "type": ["string", "null"] }
+      },
+      "additionalProperties": true
+    }
+  },
+  "additionalProperties": true
+}

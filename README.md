@@ -1,26 +1,78 @@
 # Senpaii — CDK Global CLI
 
-A global command-line distribution for the Cursor Development Kit (CDK).
+**CDK Global CLI** is the global installer and project manager for the Cursor Development Kit. Install the CLI once, then initialize CDK from the terminal of any supported project.
 
-## Status
+> Current status: early v0.1.0 implementation. Cursor is the first IDE adapter.
 
-Early development. The first milestone is a safe, cross-platform CLI that can initialize CDK in any project without overwriting existing IDE configuration.
+## Requirements
 
-## Planned command
+- Node.js 20 or newer
+- npm
+- Git
+
+## Install globally from GitHub
+
+After the release is merged to `main`:
 
 ```powershell
-cdk-kit init
+npm install --global git+https://github.com/shibushaba/Senpaii.git
 ```
 
-## Design principles
+To test the current development branch before release:
 
-- Install the engine once; initialize individual projects on demand.
-- Keep project memory isolated per repository.
-- Preview and track managed files before writing them.
-- Never overwrite user-owned files silently.
-- Require explicit human approval for global knowledge promotion.
-- Do not commit, push, deploy, or modify application code automatically.
+```powershell
+npm install --global git+https://github.com/shibushaba/Senpaii.git#feat/cdk-global-cli-v0.1.0
+```
+
+## Use CDK in any project
+
+Open a terminal at the project's root:
+
+```powershell
+cdk-kit init --dry-run
+cdk-kit init
+cdk-kit doctor
+cdk-kit status
+```
+
+The first command previews planned changes. The second asks before writing. Use `cdk-kit init --yes` only when you have reviewed the plan and want non-interactive application.
+
+## Available commands
+
+| Command | Purpose |
+| --- | --- |
+| `cdk-kit init` | Preview and initialize CDK assets in the current project |
+| `cdk-kit doctor` | Check Node version, IDE files and CDK manifest |
+| `cdk-kit status` | Show the installed CDK version and detected project profile |
+| `cdk-kit update` | Safely reconcile files managed by CDK |
+| `cdk-kit learn` | Show the IDE learning commands |
+| `cdk-kit uninstall` | Remove unchanged CDK-managed files only |
+
+## Safety model
+
+- Existing files not recorded in the CDK manifest are treated as user-owned and are skipped.
+- On update, a CDK-managed file is replaced only if its current SHA-256 matches the last installed version.
+- Locally modified files are preserved and reported.
+- Uninstall removes only unchanged CDK-managed files.
+- Project memory remains inside that project's `.cdk/` directory.
+- Global knowledge is disabled by default. Promotion requires explicit human approval.
+- The CLI does not modify application source code, install project dependencies, commit, push, or deploy.
+
+The manifest is stored at `.cdk/cli-manifest.json`.
 
 ## Development
 
-The CLI will use Node.js and TypeScript. See the architecture and implementation documents as they are added.
+```powershell
+npm install
+npm run typecheck
+npm test
+```
+
+See [Architecture](docs/ARCHITECTURE.md), [Installation](docs/INSTALLATION.md), and [Security](docs/SECURITY.md).
+
+## Roadmap
+
+1. v0.1.0 — safe global CLI and Cursor learning foundation.
+2. v0.2.0 — package the complete existing CDK v1.0 rules, 30 commands, 13 skills, profiles and quality gates.
+3. v0.3.0 — framework profiles, richer doctor diagnostics, and safe global CLI self-update.
+4. Later — additional IDE adapters and approved global knowledge distribution.

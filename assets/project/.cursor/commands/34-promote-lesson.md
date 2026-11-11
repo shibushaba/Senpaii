@@ -1,0 +1,1 @@
+Assess a verified lesson for possible global reuse. Check source evidence, project specificity, sanitization, duplicate knowledge, configured global path, and approval policy. A proposed lesson is not eligible. Never enable global knowledge or promote without explicit approval naming the exact proposal.

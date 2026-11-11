@@ -1,0 +1,1 @@
+Independently review the requested lesson against its source experiences, template, and JSON schema. Inspect actual file contents. Check duplicate YAML keys, unsupported claims, scope, status, confidence, and evidence gaps. Do not edit, verify, reject, or promote unless explicitly instructed.

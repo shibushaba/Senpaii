@@ -1,0 +1,1 @@
+Capture a development experience from the current task, errors, decisions, workflow, UAT, incident, or idea. Use the project templates and schemas. Separate observed evidence from hypotheses and recommendations. Create a proposed lesson only when a reusable conclusion is supported. Do not verify or promote automatically. Never include secrets or customer/production payloads.

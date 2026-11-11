@@ -1,0 +1,15 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "CDK Experience",
+  "type": "object",
+  "required": ["id", "record_type", "status", "created_at", "project_id"],
+  "properties": {
+    "id": { "type": "string", "pattern": "^EXP-[0-9]{8}-[0-9]{3}$" },
+    "record_type": { "const": "experience" },
+    "status": { "enum": ["captured", "analyzed", "archived"] },
+    "created_at": { "type": "string", "format": "date-time" },
+    "project_id": { "type": "string", "minLength": 1 },
+    "category": { "enum": ["error", "decision", "workflow", "uat", "incident", "idea", "other"] }
+  },
+  "additionalProperties": true
+}

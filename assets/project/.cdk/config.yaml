@@ -1,0 +1,19 @@
+enabled: true
+project_id: "replace-with-stable-project-slug"
+project_name: "Replace with project name"
+
+capture:
+  mode: assisted
+  require_evidence: true
+
+learning:
+  auto_verify: false
+  auto_promote: false
+  project_memory: true
+
+global_knowledge:
+  enabled: false
+  path: null
+
+promotion:
+  requires_explicit_approval: true

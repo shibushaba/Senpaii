@@ -1,0 +1,1 @@
+Search only this project's .cdk/ memory. Include proposed and verified records, but label their status clearly. Retrieve supporting evidence and limitations. Treat proposed lessons as advisory, not verified controls. Do not search global knowledge unless explicitly requested and configured. Do not edit files.

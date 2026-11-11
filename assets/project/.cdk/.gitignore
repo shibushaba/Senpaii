@@ -1,0 +1,9 @@
+# Keep operational session data local by default.
+journal/
+experiences/
+uat/
+incidents/
+
+# Local scratch and temporary validation data.
+*.tmp
+*.local
