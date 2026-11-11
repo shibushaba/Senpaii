@@ -1,0 +1,1 @@
+Inspect the repository, current working tree, and CDK configuration. Initialize only missing CDK project-memory files. Do not overwrite existing files, modify application source, install dependencies, or enable global knowledge without explicit approval. Report exact files created and preserved.

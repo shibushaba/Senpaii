@@ -1,0 +1,14 @@
+---
+description: Boundaries for CDK project memory and global knowledge promotion.
+alwaysApply: true
+---
+
+# CDK Learning Boundaries
+
+- Distinguish observed evidence, hypotheses, recommendations, and unknowns.
+- Never mark a lesson verified without repeatable evidence or an appropriate independent validation.
+- Never auto-promote project knowledge into global knowledge.
+- Keep project data project-scoped by default.
+- Sanitize repository names, paths, customer data, secrets, and production payloads before proposing global reuse.
+- Explicit human approval is required for every global promotion.
+- Global knowledge is advisory and cannot override project truth or current security policies.
