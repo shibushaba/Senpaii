@@ -172,8 +172,8 @@ test("published package version, engine, and executable come from the TypeScript
   assert.equal(pkg.version, ENGINE_VERSION);
   assert.equal(pkg.bin["cdk-kit"], "./dist/cli.js");
   const source = await readFile(new URL("../src/cli.ts", import.meta.url), "utf8");
-  assert.ok(source.startsWith("#!/usr/bin/env node\n"));
+  assert.match(source, /^#!\/usr\/bin\/env node\r?\n/);
   const compiled = await readFile(new URL("../dist/cli.js", import.meta.url), "utf8");
-  assert.ok(compiled.startsWith("#!/usr/bin/env node\n"));
+  assert.match(compiled, /^#!\/usr\/bin\/env node\r?\n/);
   await assert.rejects(readFile(new URL("../bin/cdk-kit.js", import.meta.url), "utf8"));
 });

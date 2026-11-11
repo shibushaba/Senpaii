@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
-import { promoteLesson, retractLesson, searchKnowledge, syncKnowledge } from "../dist/lib/knowledge.js";
+import { promoteLesson, retractLesson, searchKnowledge, splitFrontmatter, frontmatterValue, syncKnowledge } from "../dist/lib/knowledge.js";
+import { readProjectConfig } from "../dist/lib/config.js";
 import { applyInstallPlan, buildInstallPlan, uninstallManagedFiles } from "../dist/lib/installer.js";
 import { fileURLToPath } from "node:url";
 
@@ -137,6 +138,36 @@ test("uninstall removes a generated global mirror and leaves the user library al
     await assert.rejects(readFile(path.join(root, ".cdk", "global-mirror", "INDEX.md"), "utf8"));
     const kept = await readFile(path.join(home, "knowledge", "lessons", "GLB-20261111-001.md"), "utf8");
     assert.match(kept, /xylophone-protocol/);
+  } finally {
+    await rm(home, { recursive: true, force: true });
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("CRLF config and lessons still opt in, promote, and sync", async () => {
+  const home = await mkdtemp(path.join(os.tmpdir(), "cdk-home-"));
+  const root = await mkdtemp(path.join(os.tmpdir(), "cdk-project-"));
+  try {
+    const parsed = splitFrontmatter(lessonBody.replaceAll("\n", "\r\n"));
+    assert.equal(parsed.hasFrontmatter, true);
+    assert.equal(frontmatterValue(parsed.raw, "status"), "verified");
+    await mkdir(path.join(root, ".cdk", "lessons", "verified"), { recursive: true });
+    await writeFile(path.join(root, ".cdk", "config.yaml"), "global_knowledge:\r\n  enabled: true\r\n  path: null\r\n");
+    const config = await readProjectConfig(root);
+    assert.equal(config.globalEnabled, true);
+    const lesson = path.join(root, ".cdk", "lessons", "verified", "delivery.md");
+    await writeFile(lesson, lessonBody.replaceAll("\n", "\r\n"));
+    const promoted = await promoteLesson({
+      lessonPath: lesson,
+      yes: true,
+      home,
+      now: new Date("2026-11-11T03:00:00.000Z")
+    });
+    assert.equal(promoted.wrote, true);
+    const synced = await syncKnowledge({ projectRoot: root, home });
+    assert.equal(synced.mirrored, true);
+    const mirror = await readFile(path.join(root, ".cdk", "global-mirror", "INDEX.md"), "utf8");
+    assert.match(mirror, /xylophone-protocol/);
   } finally {
     await rm(home, { recursive: true, force: true });
     await rm(root, { recursive: true, force: true });

@@ -7,6 +7,7 @@ import {
   type CdkManifest
 } from "./manifest.js";
 import { detectProject, renderActivationYaml } from "./project.js";
+import { normalizeNewlines } from "./text.js";
 
 export type PlanAction = "create" | "update" | "unchanged" | "skip-conflict" | "skip-modified";
 export interface InstallPlanEntry { relativePath: string; action: PlanAction; reason?: string }
@@ -71,13 +72,14 @@ async function inspectDestination(root: string, relativePath: string): Promise<"
 }
 
 function renderAsset(relativePath: string, content: string, projectRoot: string): string {
+  const normalized = normalizeNewlines(content);
   if (relativePath === ".cdk/config.yaml") {
     const identity = projectIdentity(projectRoot);
-    return content
+    return normalized
       .replaceAll("replace-with-stable-project-slug", identity.id)
       .replaceAll("Replace with project name", identity.name);
   }
-  return content;
+  return normalized;
 }
 
 function resolveInsideProject(root: string, relativePath: string): string {

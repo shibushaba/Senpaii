@@ -4,6 +4,7 @@ import os from "node:os";
 import path from "node:path";
 import { readProjectConfig, type ProjectConfig } from "./config.js";
 import { projectIdentity } from "./manifest.js";
+import { normalizeNewlines } from "./text.js";
 
 const MIRROR_HEADER = "<!-- generated_by: cdk-kit global-mirror -->";
 const MAX_RECORD_BYTES = 200_000;
@@ -68,7 +69,7 @@ export function redactEmails(content: string): string {
 }
 
 export function splitFrontmatter(content: string): { raw: string; body: string; hasFrontmatter: boolean } {
-  const normalized = content.replace(/^\uFEFF/, "");
+  const normalized = normalizeNewlines(content);
   if (!normalized.startsWith("---\n")) return { raw: "", body: normalized, hasFrontmatter: false };
   const end = normalized.indexOf("\n---", 4);
   if (end < 0) return { raw: "", body: normalized, hasFrontmatter: false };
@@ -298,7 +299,7 @@ export async function promoteLesson(options: {
   if (relativePath.startsWith("..") || !relativePath.startsWith(".cdk/lessons/verified/") || !relativePath.endsWith(".md")) {
     throw new Error("Only a lesson with status: verified inside .cdk/lessons/verified/ can be promoted.");
   }
-  const original = await readFile(resolved, "utf8");
+  const original = normalizeNewlines(await readFile(resolved, "utf8"));
   const parsed = splitFrontmatter(original);
   const status = frontmatterValue(parsed.raw, "status");
   if (status !== "verified") {
