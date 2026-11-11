@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, writeFile, mkdir, lstat, unlink, rmdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { gunzipSync } from "node:zlib";
 import {
   ENGINE_VERSION, MANIFEST_RELATIVE_PATH, projectIdentity, readManifest, writeManifest,
   type CdkManifest
@@ -9,6 +10,13 @@ import {
 
 export type PlanAction = "create" | "update" | "unchanged" | "skip-conflict" | "skip-modified";
 export interface InstallPlanEntry { relativePath: string; action: PlanAction; reason?: string }
+
+interface ToolkitBundle {
+  schemaVersion: 1;
+  source: "cursor-development-kit-v1.0.0";
+  files: Record<string, string>;
+}
+interface InstallAsset { relativePath: string; content: Buffer }
 
 export function bundledAssetsDir(): string {
   return fileURLToPath(new URL("../../assets/project/", import.meta.url));
@@ -23,10 +31,6 @@ function destinationForAsset(assetPath: string): string {
   return assetPath === ".cdk/cdk-gitignore" ? ".cdk/.gitignore" : assetPath;
 }
 
-function assetForDestination(destinationPath: string): string {
-  return destinationPath === ".cdk/.gitignore" ? ".cdk/cdk-gitignore" : destinationPath;
-}
-
 async function walkFiles(directory: string, base = directory): Promise<string[]> {
   const entries = await readdir(directory, { withFileTypes: true });
   const files: string[] = [];
@@ -36,6 +40,48 @@ async function walkFiles(directory: string, base = directory): Promise<string[]>
     else if (entry.isFile()) files.push(path.relative(base, fullPath).split(path.sep).join("/"));
   }
   return files;
+}
+
+function validateBundlePath(relativePath: string): void {
+  if (!relativePath || relativePath.startsWith("/") || relativePath.includes("\\") ||
+      relativePath.split("/").some(segment => !segment || segment === "." || segment === "..") ||
+      !(relativePath.startsWith(".cursor/") || relativePath.startsWith(".cdk/"))) {
+    throw new Error(`Toolkit bundle contains an unsafe or unsupported path: ${relativePath}`);
+  }
+}
+
+async function loadAssets(assetsDir: string): Promise<Map<string, Buffer>> {
+  const assets = new Map<string, Buffer>();
+  const paths = await walkFiles(assetsDir);
+
+  for (const assetPath of paths) {
+    if (assetPath.startsWith(".cdk/bundles/") && assetPath.endsWith(".json.gz")) continue;
+    const destination = destinationForAsset(assetPath);
+    assets.set(destination, await readFile(path.join(assetsDir, assetPath.split("/").join(path.sep))));
+  }
+
+  const bundlePaths = paths
+    .filter(assetPath => assetPath.startsWith(".cdk/bundles/") && assetPath.endsWith(".json.gz"))
+    .sort();
+  for (const bundlePath of bundlePaths) {
+    const compressed = await readFile(path.join(assetsDir, bundlePath.split("/").join(path.sep)));
+    let bundle: ToolkitBundle;
+    try {
+      bundle = JSON.parse(gunzipSync(compressed).toString("utf8")) as ToolkitBundle;
+    } catch (error) {
+      throw new Error(`Unable to read CDK toolkit bundle ${bundlePath}: ${error instanceof Error ? error.message : String(error)}`);
+    }
+    if (bundle.schemaVersion !== 1 || bundle.source !== "cursor-development-kit-v1.0.0" ||
+        !bundle.files || typeof bundle.files !== "object" || Array.isArray(bundle.files)) {
+      throw new Error(`Unsupported or invalid CDK toolkit bundle: ${bundlePath}`);
+    }
+    for (const [relativePath, content] of Object.entries(bundle.files)) {
+      validateBundlePath(relativePath);
+      if (typeof content !== "string") throw new Error(`Toolkit bundle content must be UTF-8 text: ${relativePath}`);
+      assets.set(relativePath, Buffer.from(content, "utf8"));
+    }
+  }
+  return new Map([...assets.entries()].sort(([a], [b]) => a.localeCompare(b)));
 }
 
 async function inspectDestination(root: string, relativePath: string): Promise<"missing" | "file" | "blocked"> {
@@ -80,18 +126,16 @@ export async function buildInstallPlan(projectRoot: string, assetsDir = bundledA
   }
   const manifest = await readManifest(root);
   const managed = manifest?.files ?? {};
-  const assets = await walkFiles(assetsDir);
+  const assets = await loadAssets(assetsDir);
   const plan: InstallPlanEntry[] = [];
 
-  for (const assetPath of assets) {
-    const relativePath = destinationForAsset(assetPath);
+  for (const [relativePath, sourceContent] of assets) {
     const destination = resolveInsideProject(root, relativePath);
     const destinationState = await inspectDestination(root, relativePath);
     if (destinationState === "blocked") {
       plan.push({ relativePath, action: "skip-conflict", reason: "A path component is a symlink, directory, or non-directory; refusing to follow it." });
       continue;
     }
-    const sourceContent = await readFile(path.join(assetsDir, assetPath.split("/").join(path.sep)));
     const desiredHash = sha256(renderAsset(relativePath, sourceContent.toString("utf8"), root));
     const currentRecord = managed[relativePath];
 
@@ -121,6 +165,7 @@ export async function applyInstallPlan(
   const root = path.resolve(projectRoot);
   // Re-plan immediately before writing so files changed after the preview are protected.
   const plan = await buildInstallPlan(root, assetsDir);
+  const assets = await loadAssets(assetsDir);
   const previous = await readManifest(root);
   const files = { ...(previous?.files ?? {}) };
   let created = 0;
@@ -133,10 +178,10 @@ export async function applyInstallPlan(
     if (item.action === "skip-conflict" || item.action === "skip-modified") { skipped++; continue; }
     if (item.action === "unchanged") { unchanged++; continue; }
 
-    const source = path.join(assetsDir, assetForDestination(item.relativePath).split("/").join(path.sep));
+    const raw = assets.get(item.relativePath);
+    if (!raw) throw new Error(`CDK asset disappeared after planning: ${item.relativePath}`);
     const destination = resolveInsideProject(root, item.relativePath);
-    const raw = await readFile(source, "utf8");
-    const content = renderAsset(item.relativePath, raw, root);
+    const content = renderAsset(item.relativePath, raw.toString("utf8"), root);
     await mkdir(path.dirname(destination), { recursive: true });
     await writeFile(destination, content, "utf8");
     files[item.relativePath] = {
