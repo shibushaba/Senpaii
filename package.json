@@ -1,6 +1,6 @@
 {
   "name": "cdk-kit",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "Global command-line installer and manager for the Cursor Development Kit",
   "type": "module",
   "bin": { "cdk-kit": "./bin/cdk-kit.js" },
