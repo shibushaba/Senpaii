@@ -2,7 +2,7 @@
 
 **CDK Global CLI** is the global installer and project manager for the Cursor Development Kit. Install the CLI once, then initialize CDK from the terminal of any supported project.
 
-> Current status: early v0.1.0 implementation. Cursor is the first IDE adapter.
+> Current status: early v0.1.0 implementation. Cursor is the first IDE adapter. Project framework detection is informational in this version; stack-specific profiles are not automatically installed yet.
 
 ## Requirements
 
@@ -73,6 +73,6 @@ See [Architecture](docs/ARCHITECTURE.md), [Installation](docs/INSTALLATION.md), 
 ## Roadmap
 
 1. v0.1.0 — safe global CLI and Cursor learning foundation.
-2. v0.2.0 — package the complete existing CDK v1.0 rules, 30 commands, 13 skills, profiles and quality gates.
-3. v0.3.0 — framework profiles, richer doctor diagnostics, and safe global CLI self-update.
+2. v0.2.0 — package the complete existing CDK v1.0 rules, 30 commands, 13 skills, technology profiles and quality gates, then activate framework-specific adapters.
+3. v0.3.0 — richer doctor diagnostics and safe global CLI self-update.
 4. Later — additional IDE adapters and approved global knowledge distribution.
