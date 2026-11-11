@@ -12,7 +12,7 @@
 npm install --global git+https://github.com/shibushaba/Senpaii.git
 ```
 
-For development testing before the feature branch is merged:
+For development testing before the v0.2.0 branch is merged:
 
 ```powershell
 npm install --global git+https://github.com/shibushaba/Senpaii.git#feat/cdk-global-cli-v0.1.0
@@ -27,17 +27,22 @@ cdk-kit init --dry-run
 cdk-kit init
 ```
 
-Review the preview. Add `--yes` only when you explicitly want to apply the plan without an interactive confirmation.
+Review the preview. Existing user-owned files are skipped. Locally modified CDK-managed files are preserved. Add `--yes` only when you explicitly want to apply the plan without an interactive confirmation.
 
 ## Other commands
 
 ```powershell
 cdk-kit doctor
 cdk-kit status
+cdk-kit profiles
 cdk-kit update --dry-run
 cdk-kit learn
 cdk-kit uninstall --dry-run
 ```
+
+## Technology profiles
+
+Six profile documents are installed under `.cdk/profiles/`. Run `cdk-kit profiles` to see which profiles match repository markers. Profile detection is advisory. Cursor should inspect project source/configuration and read only matching profiles; profiles do not override project truth.
 
 ## Update the global CLI
 

@@ -1,4 +1,4 @@
-import { access } from "node:fs/promises";
+import { access, readdir } from "node:fs/promises";
 import path from "node:path";
 import { stdout } from "node:process";
 import { ENGINE_VERSION, readManifest } from "../lib/manifest.js";
@@ -19,7 +19,19 @@ export async function runDoctor(target = "."): Promise<void> {
   }
   const manifest = await readManifest(root);
   checks.push({ label: "CDK manifest", ok: Boolean(manifest), detail: manifest ? `engine ${manifest.engineVersion}, ${Object.keys(manifest.files).length} managed files` : "Not installed" });
-  checks.push({ label: "Project profile", ok: true, detail: project.profiles.join(", ") || "general" });
+  checks.push({ label: "Project profile detection", ok: true, detail: project.profiles.join(", ") || "no profile matched; general guidance applies" });
+  try {
+    const files = (await readdir(path.join(root, ".cdk", "profiles"))).filter(file => file.endsWith(".md"));
+    checks.push({ label: "Technology profiles", ok: files.length >= 6, detail: `${files.length} of 6 installed` });
+  } catch {
+    checks.push({ label: "Technology profiles", ok: false, detail: "Not installed; run cdk-kit init" });
+  }
+  try {
+    const files = (await readdir(path.join(root, ".cdk", "quality-gates"))).filter(file => file.endsWith(".md"));
+    checks.push({ label: "Quality gates", ok: files.length >= 8, detail: `${files.length} of 8 installed` });
+  } catch {
+    checks.push({ label: "Quality gates", ok: false, detail: "Not installed; run cdk-kit init" });
+  }
   stdout.write(`CDK Doctor — CLI ${ENGINE_VERSION}\n\n`);
   for (const check of checks) stdout.write(`[${check.ok ? "PASS" : "WARN"}] ${check.label}: ${check.detail}\n`);
   if (checks.some(check => !check.ok)) process.exitCode = 1;

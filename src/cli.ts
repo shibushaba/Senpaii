@@ -3,6 +3,7 @@ import { Command } from "commander";
 import { runInit } from "./commands/init.js";
 import { runDoctor } from "./commands/doctor.js";
 import { runStatus } from "./commands/status.js";
+import { runProfiles } from "./commands/profiles.js";
 import { runUpdate } from "./commands/update.js";
 import { runUninstall } from "./commands/uninstall.js";
 import { runLearn } from "./commands/learn.js";
@@ -30,6 +31,11 @@ program.command("status")
   .description("Show CDK and project profile status")
   .argument("[path]", "project directory", ".")
   .action(runStatus);
+
+program.command("profiles")
+  .description("List bundled technology profiles and show evidence-based project matches")
+  .argument("[path]", "project directory", ".")
+  .action(runProfiles);
 
 program.command("update")
   .description("Safely reconcile CDK-managed files to this CLI version")
