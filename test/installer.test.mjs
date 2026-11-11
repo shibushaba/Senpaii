@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, writeFile, rm, stat } from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -18,6 +18,10 @@ test("first install plans and writes bundled assets with a manifest", async () =
     assert.equal(result.created, plan.length);
     const config = await readFile(path.join(root, ".cdk", "config.yaml"), "utf8");
     assert.ok(config.includes(`project_name: "${path.basename(root)}"`));
+    for (const directory of ["experiences", "journal", "lessons/proposed", "lessons/verified", "lessons/rejected", "decisions", "workflows", "uat", "incidents", "promotion-queue"]) {
+      const info = await stat(path.join(root, ".cdk", directory));
+      assert.ok(info.isDirectory(), `expected .cdk/${directory} to exist`);
+    }
     const manifest = JSON.parse(await readFile(path.join(root, ".cdk", "cli-manifest.json"), "utf8"));
     assert.equal(Object.keys(manifest.files).length, plan.length);
   } finally {
