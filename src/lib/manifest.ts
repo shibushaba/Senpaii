@@ -2,7 +2,7 @@ import { readFile, mkdir, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 
 export const ENGINE_NAME = "cdk-kit";
-export const ENGINE_VERSION = "0.1.0";
+export const ENGINE_VERSION = "0.1.1";
 export const MANIFEST_RELATIVE_PATH = path.join(".cdk", "cli-manifest.json");
 
 export interface ManagedFileRecord {
@@ -47,8 +47,6 @@ export async function writeManifest(projectRoot: string, manifest: CdkManifest):
   await mkdir(path.dirname(manifestPath), { recursive: true });
   const temporaryPath = `${manifestPath}.tmp`;
   await writeFile(temporaryPath, `${JSON.stringify(manifest, null, 2)}\n`, "utf8");
-  await rename(temporaryPath, manifestPath).catch(async (error: NodeJS.ErrnoException) => {
-    await unlink(temporaryPath).catch(() => undefined);
-    throw error;
-  });
+  try { await rename(temporaryPath, manifestPath); }
+  catch (error) { await unlink(temporaryPath).catch(() => undefined); throw error; }
 }
