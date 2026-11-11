@@ -23,8 +23,4 @@ jobs:
       - name: Install globally from GitHub and smoke-test project lifecycle
         run: |
           npm install --global git+https://github.com/shibushaba/Senpaii.git#feat/cdk-global-cli-v0.1.0
-          cdk-kit --version
-          node -e "require('node:fs').mkdirSync('cdk-smoke-project', { recursive: true })"
-          cdk-kit init cdk-smoke-project --yes
-          cdk-kit status cdk-smoke-project
-          cdk-kit uninstall cdk-smoke-project --yes
+          node scripts/smoke-global-install.mjs
