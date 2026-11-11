@@ -8,7 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const ENGINE = "cdk-kit";
-const VERSION = "0.1.0";
+const VERSION = "0.2.0";
 const MANIFEST_RELATIVE = path.join(".cdk", "cli-manifest.json");
 const ASSETS = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../assets/project");
 
@@ -151,25 +151,58 @@ async function uninstallFiles(root) {
   return { removed, preserved };
 }
 async function detectProject(root) {
-  const markers = [], profiles = new Set();
+  const markers = [], profiles = new Set(), dependencies = new Set();
   const exists = async p => { try { await access(path.join(root, p)); return true; } catch { return false; } };
+  const includesAny = async (p, patterns) => {
+    try {
+      const text = (await readFile(path.join(root, p), "utf8")).toLowerCase();
+      return patterns.some(pattern => pattern.test(text));
+    } catch { return false; }
+  };
+
   if (await exists("package.json")) {
     markers.push("package.json");
     try {
       const pkg = JSON.parse(await readFile(path.join(root, "package.json"), "utf8"));
-      const deps = { ...pkg.dependencies, ...pkg.devDependencies };
-      if (deps.react || deps.vite) profiles.add("react-typescript");
-      if (deps.next) profiles.add("nextjs");
-      if (deps["@nestjs/core"]) profiles.add("nestjs");
+      for (const name of [...Object.keys(pkg.dependencies ?? {}), ...Object.keys(pkg.devDependencies ?? {})]) {
+        dependencies.add(name.toLowerCase());
+      }
+      if (dependencies.has("react") && dependencies.has("vite") &&
+          (dependencies.has("typescript") || await exists("tsconfig.json"))) profiles.add("react-typescript-vite");
     } catch { markers.push("package.json (unreadable)"); }
   }
-  if (await exists("pyproject.toml")) { markers.push("pyproject.toml"); profiles.add("python"); }
-  if (await exists("requirements.txt")) { markers.push("requirements.txt"); profiles.add("python"); }
-  if (await exists("manage.py")) profiles.add("django");
-  if (await exists("pubspec.yaml")) { markers.push("pubspec.yaml"); profiles.add("flutter-dart"); }
-  if (await exists("deno.json") || await exists("deno.jsonc")) { markers.push("deno.json"); profiles.add("deno"); }
-  if (await exists("go.mod")) { markers.push("go.mod"); profiles.add("go"); }
-  if (await exists("Cargo.toml")) { markers.push("Cargo.toml"); profiles.add("rust"); }
+
+  for (const marker of ["pyproject.toml", "requirements.txt", "requirements-dev.txt", "Pipfile"]) {
+    if (await exists(marker)) { markers.push(marker); profiles.add("python-django-fastapi"); }
+  }
+  if (await exists("manage.py")) profiles.add("python-django-fastapi");
+  if (await exists("pubspec.yaml")) {
+    markers.push("pubspec.yaml");
+    profiles.add("flutter-dart");
+    if (await includesAny("pubspec.yaml", [/supabase_flutter/, /sqflite/, /drift:/])) profiles.add("databases-supabase");
+  }
+
+  const databaseDeps = ["@supabase/supabase-js", "supabase_flutter", "pg", "postgres", "mysql2",
+    "@prisma/client", "prisma", "drizzle-orm", "typeorm", "sequelize", "knex"];
+  if (databaseDeps.some(name => dependencies.has(name))) profiles.add("databases-supabase");
+  if (await exists("supabase/config.toml") || await exists("supabase")) {
+    markers.push("supabase/");
+    profiles.add("databases-supabase");
+  }
+
+  const aiPatterns = [/\\bopenai\\b/, /\\banthropic\\b/, /google-generativeai/, /google-genai/,
+    /\\bgroq\\b/, /\\blangchain\\b/, /llama[-_]index/, /\\bchromadb\\b/, /\\bpinecone\\b/];
+  for (const file of ["requirements.txt", "requirements-dev.txt", "pyproject.toml"]) {
+    if (await includesAny(file, aiPatterns)) profiles.add("ai-llm-rag");
+  }
+  const aiDeps = ["openai", "anthropic", "@google/genai", "@google/generative-ai", "groq-sdk",
+    "langchain", "@langchain/core", "llamaindex", "chromadb", "@pinecone-database/pinecone"];
+  if (aiDeps.some(name => dependencies.has(name))) profiles.add("ai-llm-rag");
+
+  if (dependencies.has("n8n") || await exists(".n8n") || await exists("n8n")) profiles.add("n8n-automation");
+  if (await exists("deno.json") || await exists("deno.jsonc")) markers.push("deno.json");
+  if (await exists("go.mod")) markers.push("go.mod");
+  if (await exists("Cargo.toml")) markers.push("Cargo.toml");
   if (await exists(".cursor")) markers.push(".cursor/ (existing IDE configuration)");
   return { markers, profiles: [...profiles].sort() };
 }
@@ -206,6 +239,14 @@ async function doctor(target = ".") {
   const manifest = await readManifest(root);
   checks.push(["CDK manifest", Boolean(manifest), manifest ? "engine " + manifest.engineVersion + ", " + Object.keys(manifest.files).length + " managed files" : "Not installed"]);
   checks.push(["Project profile", true, project.profiles.join(", ") || "general"]);
+  try {
+    const profileFiles = (await readdir(path.join(root, ".cdk", "profiles"))).filter(file => file.endsWith(".md"));
+    checks.push(["Technology profiles", profileFiles.length >= 6, profileFiles.length + " of 6 installed"]);
+  } catch { checks.push(["Technology profiles", false, "Not installed; run cdk-kit init"]); }
+  try {
+    const gateFiles = (await readdir(path.join(root, ".cdk", "quality-gates"))).filter(file => file.endsWith(".md"));
+    checks.push(["Quality gates", gateFiles.length >= 8, gateFiles.length + " of 8 installed"]);
+  } catch { checks.push(["Quality gates", false, "Not installed; run cdk-kit init"]); }
   stdout.write("CDK Doctor — CLI " + VERSION + "\n\n");
   for (const [label, ok, detail] of checks) stdout.write("[" + (ok ? "PASS" : "WARN") + "] " + label + ": " + detail + "\n");
   if (checks.some(check => !check[1])) process.exitCode = 1;
@@ -215,6 +256,34 @@ async function status(target = ".") {
   stdout.write("CDK CLI: " + VERSION + "\nProject: " + path.basename(root) + "\nPath: " + root + "\nProfiles: " + (project.profiles.join(", ") || "general") + "\n");
   if (!manifest) { stdout.write("Status: not initialized (run cdk-kit init)\n"); return; }
   stdout.write("Status: initialized\nInstalled engine: " + manifest.engineVersion + "\nManaged files: " + Object.keys(manifest.files).length + "\nLast updated: " + manifest.updatedAt + "\nProject memory: isolated in this repository\n");
+}
+async function listProfiles(target = ".") {
+  const root = path.resolve(target);
+  const project = await detectProject(root);
+  const directory = path.join(root, ".cdk", "profiles");
+  let installed;
+  try { installed = new Set(await readdir(directory)); }
+  catch {
+    stdout.write("CDK technology profiles are not installed in this project. Run cdk-kit init first.\\n");
+    return;
+  }
+  const catalog = [
+    { id: "react-typescript-vite", file: "react-typescript-vite.md", label: "React / TypeScript / Vite" },
+    { id: "python-django-fastapi", file: "python-django-fastapi.md", label: "Python / Django / FastAPI" },
+    { id: "flutter-dart", file: "flutter-dart.md", label: "Flutter / Dart" },
+    { id: "databases-supabase", file: "databases-supabase.md", label: "SQL databases / Supabase" },
+    { id: "ai-llm-rag", file: "ai-llm-rag.md", label: "AI / LLM / RAG" },
+    { id: "n8n-automation", file: "n8n-automation.md", label: "n8n / Workflow automation" }
+  ];
+  stdout.write("CDK technology profiles — " + path.basename(root) + "\\n");
+  stdout.write("Project evidence: " + (project.markers.join(", ") || "no recognized markers") + "\\n\\n");
+  for (const profile of catalog) {
+    const present = installed.has(profile.file);
+    const matched = project.profiles.includes(profile.id);
+    const state = !present ? "MISSING" : matched ? "MATCHED" : "AVAILABLE (not matched)";
+    stdout.write("[" + state + "] " + profile.label + " — .cdk/profiles/" + profile.file + "\\n");
+  }
+  stdout.write("\\nProfiles are advisory. Read only matched profiles and verify the relevant framework/database from source before applying guidance.\\n");
 }
 async function uninstall(target = ".", options = {}) {
   const root = path.resolve(target), manifest = await readManifest(root);
@@ -234,6 +303,8 @@ program.command("init").description("Preview and initialize CDK in the target pr
   .option("--dry-run", "show planned changes without writing files").action(init);
 program.command("doctor").description("Check the current project's CDK installation").argument("[path]", "project directory", ".").action(doctor);
 program.command("status").description("Show CDK and project profile status").argument("[path]", "project directory", ".").action(status);
+program.command("profiles").description("List bundled technology profiles and show evidence-based project matches")
+  .argument("[path]", "project directory", ".").action(listProfiles);
 program.command("update").description("Safely reconcile CDK-managed files to this CLI version")
   .argument("[path]", "project directory", ".").option("-y, --yes", "apply the displayed plan without prompting")
   .option("--dry-run", "show planned changes without writing files").action(init);
