@@ -11,7 +11,7 @@
 
 ## Runtime
 
-The CLI is a Node.js 20+ program. `npm install` runs `prepare`, which runs `tsc`. The package `bin` entry is `dist/cli.js`.
+The CLI is a Node.js 20+ program. `npm install` runs `prepare`, which runs the TypeScript compiler through `node`. The package `bin` entry is `dist/cli.js`.
 
 ## Components
 

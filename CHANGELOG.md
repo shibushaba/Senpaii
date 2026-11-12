@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.1 — 2026-11-12
+
+- Global install from Git on Windows no longer calls a bare `tsc` command. `prepare` runs the TypeScript compiler with `node`, which is already on PATH when `tsc` is not.
+
 ## 0.3.0 — 2026-11-11
 
 - Ships the Cursor Development Kit as loose files under `assets/project/`: 8 engineering rules plus learning rules, 30 engineering commands plus learning commands, 13 skills plus `cdk-learning`, 6 profiles, 8 quality gates, and 6 toolkit docs.
