@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.2 — 2026-11-12
+
+- A global install from Git no longer needs TypeScript to be installed before `prepare` runs. The built `dist/` is part of the repository, and install uses it when the compiler is not available yet.
+
 ## 0.3.1 — 2026-11-12
 
 - Global install from Git on Windows no longer calls a bare `tsc` command. `prepare` runs the TypeScript compiler with `node`, which is already on PATH when `tsc` is not.

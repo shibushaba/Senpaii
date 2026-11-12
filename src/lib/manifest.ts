@@ -2,7 +2,7 @@ import { readFile, mkdir, writeFile, rename, unlink } from "node:fs/promises";
 import path from "node:path";
 
 export const ENGINE_NAME = "cdk-kit";
-export const ENGINE_VERSION = "0.3.1";
+export const ENGINE_VERSION = "0.3.2";
 export const MANIFEST_RELATIVE_PATH = path.join(".cdk", "cli-manifest.json");
 
 export interface ManagedFileRecord {

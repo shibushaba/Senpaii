@@ -20,6 +20,8 @@ jobs:
       - run: npm install
       - run: npm run typecheck
       - run: npm test
+      - name: Committed dist matches the TypeScript sources
+        run: git diff --exit-code -- dist
       - name: Install this commit globally and smoke-test project lifecycle
         run: |
           npm install --global .

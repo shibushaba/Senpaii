@@ -11,7 +11,7 @@
 
 ## Runtime
 
-The CLI is a Node.js 20+ program. `npm install` runs `prepare`, which runs the TypeScript compiler through `node`. The package `bin` entry is `dist/cli.js`.
+The CLI is a Node.js 20+ program. `dist/cli.js` is committed and is the `cdk-kit` executable. `prepare` rebuilds it when TypeScript is already installed, and otherwise keeps the committed build. That is what makes a Git install work before the compiler package exists.
 
 ## Components
 
