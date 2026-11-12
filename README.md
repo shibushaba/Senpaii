@@ -2,7 +2,7 @@
 
 **CDK Global CLI** installs the Cursor Development Kit into a project: rules, slash commands, skills, stack profiles, quality gates, and a project-local learning memory in `.cdk/`.
 
-Current release: **0.3.0**. Cursor is the first IDE adapter. The toolkit is markdown and YAML. There is no vector database and the CLI does not make network calls.
+Current release: **0.3.1**. Cursor is the first IDE adapter. The toolkit is markdown and YAML. There is no vector database and the CLI does not make network calls.
 
 ## Requirements
 
