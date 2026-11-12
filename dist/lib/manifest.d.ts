@@ -1,5 +1,5 @@
 export declare const ENGINE_NAME = "cdk-kit";
-export declare const ENGINE_VERSION = "0.3.2";
+export declare const ENGINE_VERSION = "0.3.3";
 export declare const MANIFEST_RELATIVE_PATH: string;
 export interface ManagedFileRecord {
     sha256: string;
