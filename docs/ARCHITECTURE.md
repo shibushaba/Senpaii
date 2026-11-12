@@ -11,7 +11,7 @@
 
 ## Runtime
 
-The CLI is a Node.js 20+ program. `dist/cli.js` is committed and is the `cdk-kit` executable. `prepare` rebuilds it when TypeScript is already installed, and otherwise keeps the committed build. That is what makes a Git install work before the compiler package exists.
+The CLI is a Node.js 20+ program. `dist/cli.js` is committed and is the `cdk-kit` command. Installing the package does not run a build script, so a Git install does not need TypeScript and does not need an install-script approval.
 
 ## Components
 

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.3.3 — 2026-11-12
+
+- Installing from Git no longer runs a `prepare` script. npm was linking the global command at a temporary clone and then deleting that clone, so `cdk-kit` could not find `dist/cli.js`. The built file ships in the repository and is installed as a normal file.
+
 ## 0.3.2 — 2026-11-12
 
 - A global install from Git no longer needs TypeScript to be installed before `prepare` runs. The built `dist/` is part of the repository, and install uses it when the compiler is not available yet.

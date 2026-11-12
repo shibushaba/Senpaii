@@ -1,6 +1,6 @@
 {
   "name": "cdk-kit",
-  "version": "0.3.2",
+  "version": "0.3.3",
   "description": "Global command-line installer and manager for the Cursor Development Kit",
   "type": "module",
   "bin": { "cdk-kit": "./dist/cli.js" },
@@ -8,7 +8,6 @@
   "engines": { "node": ">=20" },
   "scripts": {
     "compile": "node ./node_modules/typescript/lib/tsc.js -p tsconfig.json",
-    "prepare": "node ./scripts/prepare.mjs",
     "typecheck": "node ./node_modules/typescript/lib/tsc.js -p tsconfig.json --noEmit",
     "test": "npm run compile && node --test"
   },
