@@ -1,0 +1,14 @@
+---
+description: Apply evidence-based testing and truthful completion reporting.
+alwaysApply: false
+---
+# Testing and Verification
+
+Choose tests based on risk and affected behavior:
+- Unit tests for isolated logic.
+- Integration tests for persistence, APIs and service boundaries.
+- Contract tests for external interfaces where available.
+- End-to-end tests for critical user journeys.
+- Regression tests for fixed defects.
+
+Run the narrowest relevant checks first, then broader checks when risk warrants. Inspect test output and exit codes. Do not modify or skip tests merely to obtain a green result. If checks cannot run, state why and provide the exact unverified areas.

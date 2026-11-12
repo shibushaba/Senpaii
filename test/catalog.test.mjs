@@ -5,6 +5,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { detectProject } from "../dist/lib/project.js";
+import { ENGINE_VERSION } from "../dist/lib/manifest.js";
 
 const assets = fileURLToPath(new URL("../assets/project/", import.meta.url));
 
@@ -85,7 +86,94 @@ test("Flutter and n8n profiles are detected only from matching project markers",
     const detected = await detectProject(root);
     assert.ok(detected.profiles.includes("flutter-dart"));
     assert.ok(detected.profiles.includes("n8n-automation"));
+    assert.equal(detected.gates.find(gate => gate.id === "incident")?.status, "active");
   } finally {
     await rm(root, { recursive: true, force: true });
   }
+});
+
+test("learning commands, capture rule, and learning skill are substantive", async () => {
+  const commands = await names(".cursor/commands");
+  const learningCommands = [
+    "00-cdk-init.md", "31-learn.md", "32-knowledge.md", "33-review-lessons.md", "34-promote-lesson.md",
+    "35-learn-error.md", "36-learn-workflow.md", "37-learn-decision.md", "38-learn-uat.md",
+    "39-learn-incident.md", "40-learning-report.md"
+  ];
+  for (const file of learningCommands) {
+    assert.ok(commands.has(file), `missing learning command: ${file}`);
+    const content = await readFile(path.join(assets, ".cursor", "commands", file), "utf8");
+    assert.ok(content.length > 500, `${file} is too short to be a real workflow`);
+    assert.match(content, /Do not /);
+  }
+  const rules = await names(".cursor/rules");
+  assert.ok(rules.has("08-learning-boundaries.mdc"));
+  assert.ok(rules.has("09-proactive-learning.mdc"));
+  const proactive = await readFile(path.join(assets, ".cursor", "rules", "09-proactive-learning.mdc"), "utf8");
+  assert.match(proactive, /Before acting/);
+  assert.match(proactive, /verified/);
+  assert.match(proactive, /proposed/);
+  const skill = await readFile(path.join(assets, ".cursor", "skills", "cdk-learning", "SKILL.md"), "utf8");
+  assert.match(skill, /^name: cdk-learning$/m);
+  assert.match(skill, /Never auto-verify or auto-promote/);
+});
+
+test("a Python manifest without Django or FastAPI does not select the Python profile", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "cdk-profile-test-"));
+  try {
+    await writeFile(path.join(root, "requirements.txt"), "requests==2.32.0\n");
+    const detected = await detectProject(root);
+    assert.ok(detected.markers.includes("requirements.txt"));
+    assert.equal(detected.profiles.includes("python-django-fastapi"), false);
+    assert.equal(detected.profiles.includes("databases-supabase"), false);
+    assert.deepEqual(detected.gates.filter(gate => gate.status === "active").map(gate => gate.id), [
+      "feature-completion", "security-first-pass", "pull-request"
+    ]);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("FastAPI evidence selects the Python profile and its gates, and Django also selects SQL", async () => {
+  const fastapiRoot = await mkdtemp(path.join(os.tmpdir(), "cdk-profile-test-"));
+  const djangoRoot = await mkdtemp(path.join(os.tmpdir(), "cdk-profile-test-"));
+  try {
+    await writeFile(path.join(fastapiRoot, "requirements.txt"), "fastapi==0.115.0\nuvicorn==0.32.0\n");
+    const fastapi = await detectProject(fastapiRoot);
+    assert.ok(fastapi.profiles.includes("python-django-fastapi"));
+    assert.equal(fastapi.profiles.includes("databases-supabase"), false);
+    assert.equal(fastapi.gates.find(gate => gate.id === "api-integration")?.status, "active");
+    assert.equal(fastapi.gates.find(gate => gate.id === "database-change")?.status, "available");
+    assert.equal(fastapi.gates.find(gate => gate.id === "incident")?.status, "available");
+
+    await writeFile(path.join(djangoRoot, "manage.py"), "#!/usr/bin/env python\n");
+    const django = await detectProject(djangoRoot);
+    assert.ok(django.profiles.includes("python-django-fastapi"));
+    assert.ok(django.profiles.includes("databases-supabase"));
+    assert.equal(django.gates.find(gate => gate.id === "database-change")?.status, "active");
+  } finally {
+    await rm(fastapiRoot, { recursive: true, force: true });
+    await rm(djangoRoot, { recursive: true, force: true });
+  }
+});
+
+test("React without Vite does not match the React profile", async () => {
+  const root = await mkdtemp(path.join(os.tmpdir(), "cdk-profile-test-"));
+  try {
+    await writeFile(path.join(root, "package.json"), JSON.stringify({ dependencies: { react: "^19.0.0", typescript: "^5.8.0" } }));
+    const detected = await detectProject(root);
+    assert.equal(detected.profiles.includes("react-typescript-vite"), false);
+  } finally {
+    await rm(root, { recursive: true, force: true });
+  }
+});
+
+test("published package version, engine, and executable come from the TypeScript build", async () => {
+  const pkg = JSON.parse(await readFile(new URL("../package.json", import.meta.url), "utf8"));
+  assert.equal(pkg.version, ENGINE_VERSION);
+  assert.equal(pkg.bin["cdk-kit"], "./dist/cli.js");
+  const source = await readFile(new URL("../src/cli.ts", import.meta.url), "utf8");
+  assert.match(source, /^#!\/usr\/bin\/env node\r?\n/);
+  const compiled = await readFile(new URL("../dist/cli.js", import.meta.url), "utf8");
+  assert.match(compiled, /^#!\/usr\/bin\/env node\r?\n/);
+  await assert.rejects(readFile(new URL("../bin/cdk-kit.js", import.meta.url), "utf8"));
 });

@@ -25,7 +25,9 @@ export async function runInit(target = ".", options: InitOptions = {}): Promise<
   const root = path.resolve(target);
   const project = await detectProject(root);
   const plan = await buildInstallPlan(root);
-  stdout.write(`\nCDK project setup: ${project.name}\nProject: ${root}\nDetected profiles: ${project.profiles.join(", ") || "general"}\n\n`);
+  stdout.write(`\nCDK project setup: ${project.name}\nProject: ${root}\nDetected profiles: ${project.profiles.join(", ") || "none (general guidance)"}\n`);
+  const activeGates = project.gates.filter(gate => gate.status === "active").map(gate => gate.id);
+  stdout.write(`Active quality gates: ${activeGates.join(", ")}\n\n`);
   printPlan(plan);
   const actionable = plan.some(item => item.action === "create" || item.action === "update");
   if (!actionable) { stdout.write("\nNo file changes are required.\n"); return; }

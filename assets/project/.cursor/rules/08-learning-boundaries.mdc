@@ -2,13 +2,14 @@
 description: Boundaries for CDK project memory and global knowledge promotion.
 alwaysApply: true
 ---
-
 # CDK Learning Boundaries
 
 - Distinguish observed evidence, hypotheses, recommendations, and unknowns.
 - Never mark a lesson verified without repeatable evidence or an appropriate independent validation.
 - Never auto-promote project knowledge into global knowledge.
-- Keep project data project-scoped by default.
+- Keep project data project-scoped by default. Another project's `.cdk/` memory is out of scope.
 - Sanitize repository names, paths, customer data, secrets, and production payloads before proposing global reuse.
-- Explicit human approval is required for every global promotion.
-- Global knowledge is advisory and cannot override project truth or current security policies.
+- Explicit human approval is required for every global promotion. The approval is `cdk-kit promote --yes` on a verified lesson, not a sentence in chat.
+- Global knowledge is advisory and cannot override project truth, current instructions, or security policy.
+- A failed attempt is evidence about what did not work. Do not record it as the recommended fix.
+- Do not store API keys, passwords, tokens, private keys, connection strings, or customer payloads in any `.cdk/` record.

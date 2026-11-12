@@ -2,21 +2,15 @@ import { createHash } from "node:crypto";
 import { readdir, readFile, writeFile, mkdir, lstat, unlink, rmdir } from "node:fs/promises";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { gunzipSync } from "node:zlib";
 import {
   ENGINE_VERSION, MANIFEST_RELATIVE_PATH, projectIdentity, readManifest, writeManifest,
   type CdkManifest
 } from "./manifest.js";
+import { detectProject, renderActivationYaml } from "./project.js";
+import { normalizeNewlines } from "./text.js";
 
 export type PlanAction = "create" | "update" | "unchanged" | "skip-conflict" | "skip-modified";
 export interface InstallPlanEntry { relativePath: string; action: PlanAction; reason?: string }
-
-interface ToolkitBundle {
-  schemaVersion: 1;
-  source: "cursor-development-kit-v1.0.0";
-  files: Record<string, string>;
-}
-interface InstallAsset { relativePath: string; content: Buffer }
 
 export function bundledAssetsDir(): string {
   return fileURLToPath(new URL("../../assets/project/", import.meta.url));
@@ -42,45 +36,20 @@ async function walkFiles(directory: string, base = directory): Promise<string[]>
   return files;
 }
 
-function validateBundlePath(relativePath: string): void {
-  if (!relativePath || relativePath.startsWith("/") || relativePath.includes("\\") ||
-      relativePath.split("/").some(segment => !segment || segment === "." || segment === "..") ||
-      !(relativePath.startsWith(".cursor/") || relativePath.startsWith(".cdk/"))) {
-    throw new Error(`Toolkit bundle contains an unsafe or unsupported path: ${relativePath}`);
-  }
-}
-
-async function loadAssets(assetsDir: string): Promise<Map<string, Buffer>> {
+async function loadStaticAssets(assetsDir: string): Promise<Map<string, Buffer>> {
   const assets = new Map<string, Buffer>();
-  const paths = await walkFiles(assetsDir);
-
-  for (const assetPath of paths) {
-    if (assetPath.startsWith(".cdk/bundles/") && assetPath.endsWith(".json.gz")) continue;
+  for (const assetPath of await walkFiles(assetsDir)) {
+    if (assetPath === ".cdk/activation.yaml") continue;
     const destination = destinationForAsset(assetPath);
     assets.set(destination, await readFile(path.join(assetsDir, assetPath.split("/").join(path.sep))));
   }
+  return assets;
+}
 
-  const bundlePaths = paths
-    .filter(assetPath => assetPath.startsWith(".cdk/bundles/") && assetPath.endsWith(".json.gz"))
-    .sort();
-  for (const bundlePath of bundlePaths) {
-    const compressed = await readFile(path.join(assetsDir, bundlePath.split("/").join(path.sep)));
-    let bundle: ToolkitBundle;
-    try {
-      bundle = JSON.parse(gunzipSync(compressed).toString("utf8")) as ToolkitBundle;
-    } catch (error) {
-      throw new Error(`Unable to read CDK toolkit bundle ${bundlePath}: ${error instanceof Error ? error.message : String(error)}`);
-    }
-    if (bundle.schemaVersion !== 1 || bundle.source !== "cursor-development-kit-v1.0.0" ||
-        !bundle.files || typeof bundle.files !== "object" || Array.isArray(bundle.files)) {
-      throw new Error(`Unsupported or invalid CDK toolkit bundle: ${bundlePath}`);
-    }
-    for (const [relativePath, content] of Object.entries(bundle.files)) {
-      validateBundlePath(relativePath);
-      if (typeof content !== "string") throw new Error(`Toolkit bundle content must be UTF-8 text: ${relativePath}`);
-      assets.set(relativePath, Buffer.from(content, "utf8"));
-    }
-  }
+async function loadAssets(projectRoot: string, assetsDir: string): Promise<Map<string, Buffer>> {
+  const assets = await loadStaticAssets(assetsDir);
+  const project = await detectProject(projectRoot);
+  assets.set(".cdk/activation.yaml", Buffer.from(renderActivationYaml(project), "utf8"));
   return new Map([...assets.entries()].sort(([a], [b]) => a.localeCompare(b)));
 }
 
@@ -103,13 +72,14 @@ async function inspectDestination(root: string, relativePath: string): Promise<"
 }
 
 function renderAsset(relativePath: string, content: string, projectRoot: string): string {
+  const normalized = normalizeNewlines(content);
   if (relativePath === ".cdk/config.yaml") {
     const identity = projectIdentity(projectRoot);
-    return content
+    return normalized
       .replaceAll("replace-with-stable-project-slug", identity.id)
       .replaceAll("Replace with project name", identity.name);
   }
-  return content;
+  return normalized;
 }
 
 function resolveInsideProject(root: string, relativePath: string): string {
@@ -126,7 +96,7 @@ export async function buildInstallPlan(projectRoot: string, assetsDir = bundledA
   }
   const manifest = await readManifest(root);
   const managed = manifest?.files ?? {};
-  const assets = await loadAssets(assetsDir);
+  const assets = await loadAssets(root, assetsDir);
   const plan: InstallPlanEntry[] = [];
 
   for (const [relativePath, sourceContent] of assets) {
@@ -165,7 +135,7 @@ export async function applyInstallPlan(
   const root = path.resolve(projectRoot);
   // Re-plan immediately before writing so files changed after the preview are protected.
   const plan = await buildInstallPlan(root, assetsDir);
-  const assets = await loadAssets(assetsDir);
+  const assets = await loadAssets(root, assetsDir);
   const previous = await readManifest(root);
   const files = { ...(previous?.files ?? {}) };
   let created = 0;
@@ -208,6 +178,14 @@ export async function uninstallManagedFiles(projectRoot: string): Promise<{ remo
   if (!manifest) return { removed: 0, preserved: 0 };
   let removed = 0;
   let preserved = 0;
+
+  const mirror = path.join(root, ".cdk", "global-mirror", "INDEX.md");
+  try {
+    const text = await readFile(mirror, "utf8");
+    if (text.startsWith("<!-- generated_by: cdk-kit global-mirror -->")) await unlink(mirror);
+  } catch (error) {
+    if ((error as NodeJS.ErrnoException).code !== "ENOENT") throw error;
+  }
 
   for (const [relativePath, record] of Object.entries(manifest.files)) {
     const state = await inspectDestination(root, relativePath);

@@ -1,32 +1,32 @@
 # Senpaii — CDK Global CLI
 
-**CDK Global CLI** is the global installer and project manager for the Cursor Development Kit. Install it once, then initialize the complete CDK toolkit from the terminal of any supported project.
+**CDK Global CLI** installs the Cursor Development Kit into a project: rules, slash commands, skills, stack profiles, quality gates, and a project-local learning memory in `.cdk/`.
 
-> Current release candidate: v0.2.0. Cursor is the first IDE adapter.
+Current release: **0.3.0**. Cursor is the first IDE adapter. The toolkit is markdown and YAML. There is no vector database and the CLI does not make network calls.
 
 ## Requirements
 
 - Node.js 20 or newer
 - npm
-- Git
+- Git, when installing from a Git URL
 
-## Install globally from GitHub
+## Install globally
 
-After the release is merged to `main`:
+From the default branch after this release is merged:
 
 ```powershell
 npm install --global git+https://github.com/shibushaba/Senpaii.git
 ```
 
-To test the current v0.2.0 branch before release:
+From a clone you are working on:
 
 ```powershell
-npm install --global git+https://github.com/shibushaba/Senpaii.git#feat/cdk-global-cli-v0.1.0
+npm install --global .
 ```
 
-## Use CDK in any project
+`prepare` compiles `src/` to `dist/cli.js`. That compiled file is the `cdk-kit` executable.
 
-Open a terminal at the project's root:
+## Use CDK in a project
 
 ```powershell
 cdk-kit init --dry-run
@@ -36,43 +36,61 @@ cdk-kit status
 cdk-kit profiles
 ```
 
-The first command previews planned changes. The second asks before writing. Use `cdk-kit init --yes` only when you have reviewed the plan and want non-interactive application.
+`init` prints the plan and asks before writing. `cdk-kit init --yes` applies the plan without a prompt. `cdk-kit update` reconciles managed files the same way.
 
-## Available terminal commands
+## Terminal commands
 
 | Command | Purpose |
 | --- | --- |
-| `cdk-kit init` | Preview and initialize the complete CDK toolkit |
-| `cdk-kit doctor` | Check Node version, IDE integration and toolkit catalogs |
-| `cdk-kit status` | Show installed version, managed files and detected profile matches |
-| `cdk-kit profiles` | List all six technology profiles and evidence-based project matches |
-| `cdk-kit update` | Safely reconcile CDK-managed files |
-| `cdk-kit learn` | Show the IDE learning commands |
-| `cdk-kit uninstall` | Remove unchanged CDK-managed files only |
+| `cdk-kit init` | Preview and install the toolkit |
+| `cdk-kit doctor` | Check Node, the manifest, profiles, and gates |
+| `cdk-kit status` | Show version, managed files, matched profiles, and active gates |
+| `cdk-kit profiles` | List six profiles and the gates this stack activates |
+| `cdk-kit update` | Reconcile CDK-managed files with this CLI version |
+| `cdk-kit learn` | List Cursor learning commands and the terminal knowledge commands |
+| `cdk-kit knowledge --query "terms"` | Search this project's `.cdk/` memory |
+| `cdk-kit knowledge --query "terms" --global` | Also search the user-level library |
+| `cdk-kit promote <verified-lesson> --dry-run` | Preview a sanitized global copy |
+| `cdk-kit promote <verified-lesson> --yes` | Approve that copy into the local global library |
+| `cdk-kit sync` | Rebuild the local index; refresh `.cdk/global-mirror/` only when the project opts in |
+| `cdk-kit retract GLB-YYYYMMDD-001 --yes` | Move one approved global lesson into the local archive |
+| `cdk-kit uninstall` | Remove unchanged CDK-managed files |
 
-## Included toolkit
+## What gets installed
 
-- 8 original engineering rules, plus the learning-boundaries rule.
-- 30 original engineering slash commands, plus CDK learning/profile/quality-gate commands.
-- 13 original Agent Skills, plus CDK learning/profile/quality-gate skills.
-- 6 technology profiles stored in `.cdk/profiles/`.
-- 8 quality gates stored in `.cdk/quality-gates/`.
-- Operating, architecture, customization, safety and Cursor compatibility docs in `.cdk/docs/`.
-- Project-scoped CDK Learning Engine memory with global promotion disabled by default.
+- 8 engineering rules (`00-core-contract` through `07-release-and-operations`) plus `08-learning-boundaries` and `09-proactive-learning`.
+- 30 engineering slash commands (`01-grill` through `30-verify`).
+- Learning commands `00-cdk-init` and `31-learn` through `40-learning-report`.
+- 13 engineering skills plus `cdk-learning`.
+- 6 technology profiles in `.cdk/profiles/`.
+- 8 quality gates in `.cdk/quality-gates/`.
+- Operating docs in `.cdk/docs/`.
+- Project memory directories, templates, and schemas in `.cdk/`.
+- `.cdk/activation.yaml`, generated from the repository. It records which profiles matched and which gates are active.
 
-Technology profiles are reference material. The CLI reports potential matches from project manifests and configuration; Cursor should read only the matching profile after confirming the stack from source. Profiles do not override repository conventions.
+Profiles and gates are reference material. The agent should read matched profiles and active gates, then confirm the stack from source. They do not override the repository.
+
+`09-proactive-learning` tells Cursor to search `.cdk/` before non-trivial work and to propose a lesson after a fix, a failed attempt, a review, or a release. Proposed lessons stay proposed until a person verifies them.
+
+## Global knowledge
+
+The global library lives on the machine, at `$CDK_HOME` or `~/.cdk-kit` when `CDK_HOME` is unset. It is not inside the project and it is not shared over the network.
+
+- Project memory in `.cdk/` is visible only to that project.
+- `global_knowledge.enabled` defaults to `false`.
+- `cdk-kit promote --yes` is the approval that copies one verified lesson into the library. A dry run writes nothing. Lessons that look like credentials are refused. A duplicate title is refused unless `--allow-duplicate` is passed.
+- `cdk-kit sync` writes `.cdk/global-mirror/INDEX.md` only after the project sets `global_knowledge.enabled: true`.
+- Editing `config.yaml` to enable that flag makes the file locally modified, so a later `cdk-kit update` will keep the edit.
 
 ## Safety model
 
-- Existing files not recorded in the CDK manifest are treated as user-owned and are skipped.
-- On update, a CDK-managed file is replaced only if its current SHA-256 matches the last installed version.
+- Files that are not in the CDK manifest are user-owned and are never overwritten.
+- On update, a managed file is replaced only when its SHA-256 still matches the last installed version.
 - Locally modified files are preserved and reported.
-- Uninstall removes only unchanged CDK-managed files.
-- Project memory remains inside that project's `.cdk/` directory.
-- Global knowledge is disabled by default. Promotion requires explicit human approval.
-- The CLI does not modify application source code, install project dependencies, commit, push or deploy.
+- Uninstall removes only unchanged managed files, plus a generated global-mirror index.
+- The CLI does not modify application source, install project dependencies, commit, push, or deploy.
 
-The manifest is stored at `.cdk/cli-manifest.json`.
+The manifest is `.cdk/cli-manifest.json`.
 
 ## Development
 
@@ -82,10 +100,4 @@ npm run typecheck
 npm test
 ```
 
-See [Architecture](docs/ARCHITECTURE.md), [Installation](docs/INSTALLATION.md), and [Security](docs/SECURITY.md).
-
-## Roadmap
-
-1. v0.2.0 — complete original CDK v1.0 toolkit and learning integration.
-2. v0.3.0 — richer framework-specific activation and profile diagnostics.
-3. Later — additional IDE adapters and approved global knowledge distribution.
+See [Architecture](docs/ARCHITECTURE.md), [Installation](docs/INSTALLATION.md), [Security](docs/SECURITY.md), and [Changelog](CHANGELOG.md).

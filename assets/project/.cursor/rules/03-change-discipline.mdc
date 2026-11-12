@@ -1,0 +1,13 @@
+---
+description: Keep code changes minimal, reviewable and consistent with repository patterns.
+alwaysApply: false
+---
+# Change Discipline
+
+- Change only what is needed for the requested behavior.
+- Preserve public interfaces unless the task requires a change.
+- Avoid speculative abstractions, premature generalization and unnecessary dependencies.
+- Do not rewrite a module just to match personal preferences.
+- Keep formatting changes limited to touched code unless requested.
+- Update related tests, types, docs and examples when behavior or contracts change.
+- Explain any unavoidable scope expansion before proceeding.
